@@ -1,0 +1,8 @@
+---
+
+commands:
+  - name: "ls"
+    parameters: "lah"
+
+  - name: "ps"
+    parameters: "aux"
