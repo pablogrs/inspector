@@ -45,6 +45,26 @@ func reader(r io.Reader) {
 	fmt.Println(errout)
 }
 
+func obeyServer(r io.Reader) {
+	buf := make([]byte, 1024)
+	n, err := r.Read(buf[:])
+	if err != nil {
+		return
+	}
+	command := string(buf[0:n])
+
+	println("Client got:", command)
+	out, errout, err := shellout(command)
+
+	if err != nil {
+		log.Printf("error: %v\n", err)
+	}
+	fmt.Println("--- stdout ---")
+	fmt.Println(out)
+	fmt.Println("--- stderr ---")
+	fmt.Println(errout)
+}
+
 func main() {
 	c, err := net.Dial("unix", "/tmp/echo.sock")
 	if err != nil {
@@ -53,10 +73,11 @@ func main() {
 	defer c.Close()
 
 	go reader(c)
-	_, err = c.Write([]byte("ls"))
-	if err != nil {
-		log.Fatal("write error:", err)
-	}
+	//_, err = c.Write([]byte("ls"))
+	// if err != nil {
+	// 	log.Fatal("write error:", err)
+	// }
+
 	reader(c)
 	time.Sleep(100 * time.Millisecond)
 }

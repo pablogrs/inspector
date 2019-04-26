@@ -5,9 +5,10 @@ import (
 	"net"
 	"os"
 
-	configurer "github.com/gookit/config"
+	inspectorConfig "github.hpe.com/pablo-gon-sanchez/inspector-gadget/inspectorConfig"
 )
 
+// SockAddr using Unix socket
 const SockAddr = "/tmp/echo.sock"
 
 // func echoServer(c net.Conn) {
@@ -17,24 +18,80 @@ const SockAddr = "/tmp/echo.sock"
 // 	c.Close()
 // }
 
-func echoServer(c net.Conn) {
-	log.Printf("Client connected [%s]", c.RemoteAddr().Network())
-	defer c.Close()
+// func echoServer(c net.Conn) {
+// 	log.Printf("Client connected [%s]", c.RemoteAddr().Network())
+// 	defer c.Close()
 
-	for {
-		buf := make([]byte, 512)
-		nr, err := c.Read(buf)
-		if err != nil {
-			return
-		}
+// 	for {
+// 		buf := make([]byte, 512)
+// 		nr, err := c.Read(buf)
+// 		if err != nil {
+// 			return
+// 		}
 
-		data := buf[0:nr]
-		println("Server got:", string(data))
-		_, err = c.Write(data)
+// 		data := buf[0:nr]
+// 		println("Server got:", string(data))
+// 		_, err = c.Write(data)
+// 		if err != nil {
+// 			log.Fatal("Write: ", err)
+// 		}
+// 	}
+// }
+
+func sendCommands(c net.Conn) {
+	//var fullCommand string
+
+	log.Printf("Inspector config: %v \n", inspectorConfig.InspectorConfiguration)
+
+	for _, v := range inspectorConfig.InspectorConfiguration.Commands {
+		log.Printf("Commands: %v -%v \n", v.Name, v.Parameters)
+		fullCommand := v.Name + " -" + v.Parameters
+		_, err := c.Write([]byte(fullCommand))
 		if err != nil {
 			log.Fatal("Write: ", err)
 		}
 	}
+
+	// for _, record := range inspectorConfig.InspectorConfiguration {
+	// 	log.Printf("Commands: %s", record)
+
+	// 	for _, value := range record.([]interface{}) {
+	// 		//log.Printf(" type of %s ", reflect.TypeOf(value))
+	// 		if commands, ok := value.(map[interface{}]interface{}); ok {
+
+	// 			log.Printf("%v -%v", commands["name"], commands["parameters"])
+	// 			command := commands["name"].(string)
+	// 			parameters := commands["parameters"].(string)
+	// 			fullCommand = command + " -" + parameters
+	// 		}
+
+	// 		// actually send command
+	// 		_, err := c.Write([]byte(fullCommand))
+	// 		if err != nil {
+	// 			log.Fatal("Write: ", err)
+	// 		}
+
+	// 		fullCommand = ""
+	// 	}
+	// }
+}
+
+func echoServer(c net.Conn) {
+	log.Printf("Client connected [%s]", c.RemoteAddr().Network())
+	defer c.Close()
+
+	// for {
+	// 	buf := make([]byte, 512)
+	// 	nr, err := c.Read(buf)
+	// 	if err != nil {
+	// 		return
+	// 	}
+
+	// data := buf[0:nr]
+	// println("Server got:", string(data))
+	sendCommands(c)
+	//time.Sleep(5 * time.Second)
+	// }
 }
 
 func main() {
@@ -48,6 +105,9 @@ func main() {
 	}
 	defer l.Close()
 
+	inspectorConfig.LoadConfig()
+	//fmt.Printf("Configuration %v \n", inspectorConfig.InspectorConfiguration)
+
 	for {
 		// Accept new connections, dispatching them to echoServer
 		// in a goroutine.
@@ -58,9 +118,5 @@ func main() {
 
 		go echoServer(conn)
 	}
-}
-
-func loadConfig() {
-	x := configurer.LoadRemote("https://github.hpe.com/pablo-gon-sanchez/inspector-gadget/")
 
 }
