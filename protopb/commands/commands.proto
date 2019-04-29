@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package slavecommands;
+option go_package="slavecommandspb";
+
+//import "results/slave-analysis.proto";
+
+message Command {
+    string name = 1;
+    string parameters = 2;
+}
+
+message RunCommandRequest {
+    int32 command_to_run = 1;
+}
+
+message RunCommandResponse {
+    string command_response = 1;
+}
+
+// message ResponseMaybe {
+//     slaveanalysis.SlaveData response = 1;
+// }
+
+service CommandService {
+    rpc RunCommand(RunCommandRequest) returns (stream RunCommandResponse){};
+}

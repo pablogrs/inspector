@@ -4,119 +4,58 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
+
+	slavecommandspb "github.hpe.com/pablo-gon-sanchez/inspector-gadget/protopb/commands"
 
 	inspectorConfig "github.hpe.com/pablo-gon-sanchez/inspector-gadget/inspectorConfig"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 // SockAddr using Unix socket
 const SockAddr = "/tmp/echo.sock"
 
-// func echoServer(c net.Conn) {
-// 	log.Printf("Client connected [%s]", c.RemoteAddr().Network())
-// 	io.Copy(c, c)
-// 	//exec.Command("/bin/sh", c)
-// 	c.Close()
-// }
-
-// func echoServer(c net.Conn) {
-// 	log.Printf("Client connected [%s]", c.RemoteAddr().Network())
-// 	defer c.Close()
-
-// 	for {
-// 		buf := make([]byte, 512)
-// 		nr, err := c.Read(buf)
-// 		if err != nil {
-// 			return
-// 		}
-
-// 		data := buf[0:nr]
-// 		println("Server got:", string(data))
-// 		_, err = c.Write(data)
-// 		if err != nil {
-// 			log.Fatal("Write: ", err)
-// 		}
-// 	}
-// }
-
-func sendCommands(c net.Conn) {
-	//var fullCommand string
-
-	log.Printf("Inspector config: %v \n", inspectorConfig.InspectorConfiguration)
-
-	for _, v := range inspectorConfig.InspectorConfiguration.Commands {
-		log.Printf("Commands: %v -%v \n", v.Name, v.Parameters)
-		fullCommand := v.Name + " -" + v.Parameters
-		_, err := c.Write([]byte(fullCommand))
-		if err != nil {
-			log.Fatal("Write: ", err)
-		}
-	}
-
-	// for _, record := range inspectorConfig.InspectorConfiguration {
-	// 	log.Printf("Commands: %s", record)
-
-	// 	for _, value := range record.([]interface{}) {
-	// 		//log.Printf(" type of %s ", reflect.TypeOf(value))
-	// 		if commands, ok := value.(map[interface{}]interface{}); ok {
-
-	// 			log.Printf("%v -%v", commands["name"], commands["parameters"])
-	// 			command := commands["name"].(string)
-	// 			parameters := commands["parameters"].(string)
-	// 			fullCommand = command + " -" + parameters
-	// 		}
-
-	// 		// actually send command
-	// 		_, err := c.Write([]byte(fullCommand))
-	// 		if err != nil {
-	// 			log.Fatal("Write: ", err)
-	// 		}
-
-	// 		fullCommand = ""
-	// 	}
-	// }
-}
-
-func echoServer(c net.Conn) {
-	log.Printf("Client connected [%s]", c.RemoteAddr().Network())
-	defer c.Close()
-
-	// for {
-	// 	buf := make([]byte, 512)
-	// 	nr, err := c.Read(buf)
-	// 	if err != nil {
-	// 		return
-	// 	}
-
-	// data := buf[0:nr]
-	// println("Server got:", string(data))
-	sendCommands(c)
-	//time.Sleep(5 * time.Second)
-	// }
-}
+type server struct{}
 
 func main() {
+	inspectorConfig.LoadConfig()
+
 	if err := os.RemoveAll(SockAddr); err != nil {
 		log.Fatal(err)
 	}
 
-	l, err := net.Listen("unix", SockAddr)
+	listener, err := net.Listen("unix", SockAddr)
+
 	if err != nil {
 		log.Fatal("listen error:", err)
 	}
-	defer l.Close()
 
-	inspectorConfig.LoadConfig()
-	//fmt.Printf("Configuration %v \n", inspectorConfig.InspectorConfiguration)
+	grpcServer := grpc.NewServer()
+	// Register reflection service
+	reflection.Register(grpcServer)
 
-	for {
-		// Accept new connections, dispatching them to echoServer
-		// in a goroutine.
-		conn, err := l.Accept()
-		if err != nil {
-			log.Fatal("accept error:", err)
+	slavecommandspb.RegisterCommandServiceServer(grpcServer, &server{})
+
+	if grpcServer.Serve(listener); err != nil {
+		log.Fatalf("Failed to start server: %v \n", err)
+	}
+}
+
+func (*server) RunCommand(request *slavecommandspb.RunCommandRequest, stream slavecommandspb.CommandService_RunCommandServer) error {
+	log.Printf("Client connected to RunCommand \n")
+
+	for _, v := range inspectorConfig.InspectorConfiguration.Commands {
+		//log.Printf("Commands: %v -%v \n", v.Name, v.Parameters)
+		fullCommand := v.Name + " -" + v.Parameters
+
+		time.Sleep(2000 * time.Millisecond)
+
+		response := &slavecommandspb.RunCommandResponse{
+			CommandResponse: fullCommand,
 		}
-
-		go echoServer(conn)
+		stream.SendMsg(response)
 	}
 
+	return nil
 }

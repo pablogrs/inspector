@@ -20,13 +20,13 @@ type Command struct {
 
 func (ic InspectorConfig) unmarshallYaml(url string) InspectorConfig {
 	btsConfig, err := configurationHelper.LoadRemote(url)
-	log.Printf("raw config %v", string(btsConfig))
+	//log.Printf("raw config %v", string(btsConfig))
 	if err != nil {
 		log.Fatalf("error reading remote URL: %v\n", err)
 	}
 
 	err = yaml.Unmarshal(btsConfig, &ic)
-	log.Printf("parsed config %v", ic)
+	//log.Printf("parsed config %v", ic)
 	if err != nil {
 		log.Fatalf("Error parsing yaml %v \n", err)
 	}

@@ -1,0 +1,44 @@
+// Simple client that connects to a server via a Unix socket and sends
+// a message.
+//
+// Eli Bendersky [http://eli.thegreenplace.net]
+// This code is in the public domain.
+package main
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"log"
+	"net"
+	"os/exec"
+	"time"
+
+	slavecommandspb "github.hpe.com/pablo-gon-sanchez/inspector-gadget/protopb/commands"
+
+	"google.golang.org/grpc"
+)
+
+func reader(r io.Reader) {
+	buf := make([]byte, 1024)
+	n, err := r.Read(buf[:])
+	if err != nil {
+		return
+	}
+	command := string(buf[0:n])
+
+	println("Client got:", command)
+}
+
+func main() {
+	// UNIX SOCKET CONNECTION
+	c, err := net.Dial("unix", "/tmp/echo.sock")
+	go reader(c)
+	_, err = c.Write([]byte("ls"))
+	 if err != nil {
+	 	log.Fatal("write error:", err)
+	 }
+	defer c.Close()
+	reader(c)
+}

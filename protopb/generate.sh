@@ -1,3 +1,4 @@
 #/bin/bash
 
-protoc -I . --go_out=. *.proto
+protoc --go_out=plugins=grpc:. commands/commands.proto
+protoc -I . --go_out=plugins=grpc:. results/*.proto
