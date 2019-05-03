@@ -57,7 +57,7 @@ func getCommand(c slavecommandspb.CommandServiceClient) {
 		CommandToRun: 1,
 	}
 	c.RunCommand(context.Background(), request)
-	streamResponse, err := c.RunCommand(context.Background(), request) // c.GreetManyTimes(context.Background(), request)
+	streamResponse, err := c.RunCommand(context.Background(), request) 
 
 	if err != nil {
 		log.Fatalf("Error when calling command stream %v", err)
